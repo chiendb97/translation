@@ -34,7 +34,7 @@ class Attention(nn.Module):
         encder_outputs = encder_outputs.permute(1, 0, 2)
         energy = torch.tanh(self.attn(torch.cat((hidden, encder_outputs), dim=2)))
         attention = self.v(energy).squeeze(2)
-        attention = attention.masked_fill(mask == 0, 1e-10)
+        attention = attention.masked_fill(mask == 0, -1e10)
         return F.softmax(attention, dim=1)
 
 

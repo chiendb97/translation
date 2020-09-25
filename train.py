@@ -20,8 +20,8 @@ def init_weight(model):
 def train(model, iterator, optimizer, criterion, clip):
     model.train()
     sum_loss = 0
-    tqdm_iteratior = tqdm(iterator)
-    for data in tqdm_iteratior:
+    tqdm_iterator = tqdm(iterator)
+    for data in tqdm_iterator:
         src, src_len = data.src
         trg = data.trg
         optimizer.zero_grad()
@@ -33,7 +33,7 @@ def train(model, iterator, optimizer, criterion, clip):
         torch.nn.utils.clip_grad_norm_(model.parameters(), clip)
         optimizer.step()
         sum_loss += loss.item()
-        tqdm_iteratior.set_description("Loss: {}".format(loss.item()))
+        tqdm_iterator.set_description("Loss: {}".format(loss.item()))
 
     return sum_loss / len(iterator)
 
@@ -41,7 +41,7 @@ def train(model, iterator, optimizer, criterion, clip):
 def evaluate(model, iterator, criterion):
     model.eval()
     sum_loss = 0
-    with torch.no_grad:
+    with torch.no_grad():
         for data in tqdm(iterator):
             src, src_len = data.src
             trg = data.trg
@@ -57,9 +57,9 @@ def evaluate(model, iterator, criterion):
 def main():
     BATCH_SIZE = 32
     NUM_EPOCH = 12
-    LR = 0.01
+    LR = 0.001
     CLIP = 1
-    STEP_SIZE = 10
+    STEP_SIZE = 4
     GAMMA = 0.1
     ENC_EMB_DIM = 256
     DEC_EMB_DIM = 256
@@ -68,7 +68,7 @@ def main():
     ENC_DROPOUT = 0.5
     DEC_DROPOUT = 0.5
 
-    device = torch.device('cpu')
+    device = torch.device('cuda')
 
     dataset = Dataset()
     train_data, valid_data, test_data = dataset.build_dataset()
@@ -90,17 +90,24 @@ def main():
     decoder = Decoder(DEC_EMB_DIM, ENC_HID_DIM, DEC_HID_DIM, OUTPUT_DIM, DEC_DROPOUT, attention)
     model = Seq2Seq(encoder, decoder, SRC_PAD_IDX, device)
     model.apply(init_weight)
+    model.to(device)
     optimizer = Adam(model.parameters(), lr=LR)
-    criterion = CrossEntropyLoss(ignore_index=TRG_PAD_IDX)
+    criterion = CrossEntropyLoss(ignore_index=TRG_PAD_IDX).to(device)
     scheduler = StepLR(optimizer, STEP_SIZE, GAMMA)
+    
+    min_valid_loss = 1e10
 
     for e in range(NUM_EPOCH):
+        print("Epoch: {}".format(e + 1))
         train_loss = train(model, train_iterator, optimizer, criterion, CLIP)
         print("Train loss: {}".format(train_loss))
         valid_loss = evaluate(model, valid_iterator, criterion)
         print("Valid loss: {}".format(valid_loss))
-        scheduler.step(e)
+        # scheduler.step(e)
 
+        if valid_loss < min_valid_loss:
+            torch.save(model.state_dict(), "best_model.pt")
+            min_valid_loss = valid_loss
 
 if __name__ == '__main__':
     main()
