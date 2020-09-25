@@ -1,4 +1,4 @@
-import sys
+import spacy
 from tqdm import tqdm
 import torch
 from torch.optim import Adam
@@ -94,7 +94,7 @@ def main():
     optimizer = Adam(model.parameters(), lr=LR)
     criterion = CrossEntropyLoss(ignore_index=TRG_PAD_IDX).to(device)
     scheduler = StepLR(optimizer, STEP_SIZE, GAMMA)
-    
+
     min_valid_loss = 1e10
 
     for e in range(NUM_EPOCH):
@@ -103,11 +103,11 @@ def main():
         print("Train loss: {}".format(train_loss))
         valid_loss = evaluate(model, valid_iterator, criterion)
         print("Valid loss: {}".format(valid_loss))
-        # scheduler.step(e)
 
         if valid_loss < min_valid_loss:
             torch.save(model.state_dict(), "best_model.pt")
             min_valid_loss = valid_loss
+
 
 if __name__ == '__main__':
     main()

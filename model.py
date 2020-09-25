@@ -28,10 +28,10 @@ class Attention(nn.Module):
         self.attn = nn.Linear(enc_hid_dim * 2 + dec_hid_dim, dec_hid_dim)
         self.v = nn.Linear(dec_hid_dim, 1, bias=False)
 
-    def forward(self, hidden, encder_outputs, mask):
-        src_len = encder_outputs.shape[0]
+    def forward(self, hidden, encoder_outputs, mask):
+        src_len = encoder_outputs.shape[0]
         hidden = hidden.unsqueeze(1).repeat(1, src_len, 1)
-        encder_outputs = encder_outputs.permute(1, 0, 2)
+        encder_outputs = encoder_outputs.permute(1, 0, 2)
         energy = torch.tanh(self.attn(torch.cat((hidden, encder_outputs), dim=2)))
         attention = self.v(energy).squeeze(2)
         attention = attention.masked_fill(mask == 0, -1e10)
